@@ -2,7 +2,7 @@
 
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { useAuth } from "@/hooks/use-auth";
+import { signIn, useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { useEffect } from "react";
 
@@ -13,20 +13,22 @@ const GoogleIcon = () => (
   );
 
 export default function LoginPage() {
-  const { login, user } = useAuth();
+  const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
-    if (user) {
+    if (status === 'authenticated') {
       router.push('/dashboard');
     }
-  }, [user, router]);
-
-  const handleLogin = () => {
-    // In a real app, this would redirect to the NextAuth Google provider.
-    // Here, we just call our mock login function.
-    login();
-  };
+  }, [status, router]);
+  
+  if (status === 'loading') {
+    return <div className="flex items-center justify-center min-h-[calc(100vh-15rem)]"><p>Loading...</p></div>;
+  }
+  
+  if (status === 'authenticated') {
+    return null; // Don't render anything while redirecting
+  }
 
   return (
     <div className="flex items-center justify-center min-h-[calc(100vh-15rem)]">
@@ -36,13 +38,10 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue to your dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={handleLogin} className="w-full">
+          <Button onClick={() => signIn('google')} className="w-full">
             <GoogleIcon />
             Sign in with Google
           </Button>
-          <p className="px-8 text-center text-sm text-muted-foreground mt-4">
-            This is a mock login. Click to simulate signing in.
-          </p>
         </CardContent>
       </Card>
     </div>

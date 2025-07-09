@@ -1,3 +1,5 @@
+import type { DefaultSession } from "next-auth";
+
 export interface SubscriptionPlan {
   id: string;
   name: string;
@@ -13,9 +15,16 @@ export interface User {
   id: string;
   name: string;
   email: string;
+  image?: string | null;
   plan: SubscriptionPlan;
   usage: {
     requests: number;
     maxRequests: number;
   };
+}
+
+declare module 'next-auth' {
+  interface Session {
+    user: User;
+  }
 }

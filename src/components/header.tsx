@@ -17,8 +17,10 @@ import { Avatar, AvatarFallback, AvatarImage } from './ui/avatar';
 export default function Header() {
   const { user, loading, logout } = useAuth();
 
-  const getInitials = (name: string) => {
+  const getInitials = (name: string | null | undefined) => {
+    if (!name) return '??';
     const names = name.split(' ');
+    if (names.length === 0) return '??';
     return names.map(n => n[0]).join('').toUpperCase();
   }
 
@@ -45,7 +47,7 @@ export default function Header() {
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" className="relative h-8 w-8 rounded-full">
                   <Avatar className="h-8 w-8">
-                    <AvatarImage src={`https://avatar.vercel.sh/${user.email}.png`} alt={user.name} />
+                    <AvatarImage src={user.image || `https://avatar.vercel.sh/${user.email}.png`} alt={user.name || ''} />
                     <AvatarFallback>{getInitials(user.name)}</AvatarFallback>
                   </Avatar>
                 </Button>
@@ -64,7 +66,7 @@ export default function Header() {
                   <Link href="/dashboard"><UserIcon className="mr-2 h-4 w-4" />Dashboard</Link>
                 </DropdownMenuItem>
                 <DropdownMenuSeparator />
-                <DropdownMenuItem onClick={logout}>
+                <DropdownMenuItem onClick={() => logout()}>
                   <LogOut className="mr-2 h-4 w-4" />
                   <span>Log out</span>
                 </DropdownMenuItem>
