@@ -10,27 +10,27 @@ const userDatabase: Record<string, Pick<User, 'id' | 'plan' | 'usage'>> = {};
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+const nextAuthSecret = process.env.NEXTAUTH_SECRET;
 
+// We're throwing an error here to prevent the app from starting if the
+// environment variables are not set. This is a good practice for
+// critical variables that are required for the app to function correctly.
 if (!googleClientId || !googleClientSecret) {
-  // To prevent the app from crashing in production if the keys are not set,
-  // we'll log an error and disable the Google provider.
-  // This is better than throwing an error that would take down the server.
-  console.error('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET. Google login will be disabled.');
+  throw new Error('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET. Please set them in your .env.local file.');
+}
+
+if (!nextAuthSecret) {
+    throw new Error('Missing NEXTAUTH_SECRET. Please set it in your .env.local file.');
 }
 
 export const authOptions: NextAuthOptions = {
   providers: [
-    // Only add the Google provider if the credentials are provided
-    ...(googleClientId && googleClientSecret
-      ? [
-          GoogleProvider({
-            clientId: googleClientId,
-            clientSecret: googleClientSecret,
-          }),
-        ]
-      : []),
+    GoogleProvider({
+      clientId: googleClientId,
+      clientSecret: googleClientSecret,
+    }),
   ],
-  secret: process.env.NEXTAUTH_SECRET,
+  secret: nextAuthSecret,
   callbacks: {
     async session({ session, token }) {
       if (session.user && token.sub && token.email) {
