@@ -11,6 +11,7 @@ const userDatabase: Record<string, Pick<User, 'id' | 'plan' | 'usage'>> = {};
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+const nextAuthUrl = process.env.NEXTAUTH_URL;
 
 // We're throwing an error here to prevent the app from starting if the
 // environment variables are not set. This is a good practice for
@@ -21,6 +22,10 @@ if (!googleClientId || !googleClientSecret) {
 
 if (!nextAuthSecret) {
     throw new Error('Missing NEXTAUTH_SECRET. Please set it in your .env.local file.');
+}
+
+if (!nextAuthUrl) {
+    throw new Error('Missing NEXTAUTH_URL. Please set it in your .env.local file. For local development, it should be http://localhost:9002');
 }
 
 export const authOptions: NextAuthOptions = {
