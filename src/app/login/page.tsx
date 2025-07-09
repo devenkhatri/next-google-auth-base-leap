@@ -38,7 +38,7 @@ export default function LoginPage() {
           <CardDescription>Sign in to continue to your dashboard</CardDescription>
         </CardHeader>
         <CardContent>
-          <Button onClick={() => signIn('google')} className="w-full">
+          <Button onClick={() => signIn('google', { callbackUrl: '/dashboard' })} className="w-full">
             <GoogleIcon />
             Sign in with Google
           </Button>
