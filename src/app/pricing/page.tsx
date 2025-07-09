@@ -14,25 +14,28 @@ export default function PricingPage() {
     const router = useRouter();
     const { toast } = useToast();
 
-    const handleSubscribe = (planId: string) => {
+    const handleSubscribe = async (planId: string) => {
         if (!user) {
             login();
-            toast({
-                title: "Logged In",
-                description: "You've been logged in. Please select your plan again.",
-            });
             return;
         }
 
         const plan = PLANS.find(p => p.id === planId);
         if (plan) {
-            // In a real app, this would initiate a Stripe checkout session
-            subscribe(plan);
-            toast({
-                title: "Subscription Updated!",
-                description: `You are now on the ${plan.name} plan.`,
-            });
-            router.push('/dashboard');
+            try {
+                await subscribe(plan);
+                toast({
+                    title: "Subscription Updated!",
+                    description: `You are now on the ${plan.name} plan.`,
+                });
+                router.push('/dashboard');
+            } catch (error) {
+                toast({
+                    title: "Error",
+                    description: "Failed to update subscription. Please try again.",
+                    variant: "destructive"
+                });
+            }
         }
     };
 

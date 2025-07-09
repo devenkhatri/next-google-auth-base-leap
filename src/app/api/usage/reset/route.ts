@@ -1,22 +1,38 @@
 import { NextResponse } from 'next/server';
+import { db } from '@/lib/firebase-admin';
 
-/**
- * In a real application, this API route would be protected (e.g., using a secret key
- * passed in the headers) and triggered by a cron job (like GitHub Actions scheduler
- * or a service like Vercel Cron Jobs).
- * 
- * It would:
- * 1. Authenticate the request.
- * 2. Query the database for all users on the free plan.
- * 3. Update their usage count to 0 for the new month.
- */
 export async function POST() {
   console.log("Monthly usage reset API triggered.");
   
-  // MOCK LOGIC: In a real app, you would perform database operations here.
+  // NOTE: In a production application, this endpoint should be protected.
+  // You could secure it with a secret key passed in the headers,
+  // checked against an environment variable. This is often called a "cron secret".
+  
+  try {
+    const usersRef = db.collection('users');
+    const freeUsersQuery = usersRef.where('plan.id', '==', 'free');
+    const snapshot = await freeUsersQuery.get();
 
-  return NextResponse.json({
-    success: true,
-    message: "Mock usage reset successful for all free-tier users."
-  });
+    if (snapshot.empty) {
+        console.log("No free-tier users found to reset.");
+        return NextResponse.json({ success: true, message: "No free-tier users found to reset." });
+    }
+
+    const batch = db.batch();
+    snapshot.docs.forEach(doc => {
+        batch.update(doc.ref, { 'usage.requests': 0 });
+    });
+
+    await batch.commit();
+
+    const message = `Successfully reset usage for ${snapshot.size} free-tier users.`;
+    console.log(message);
+    return NextResponse.json({
+        success: true,
+        message: message
+    });
+  } catch (error) {
+    console.error("Failed to reset usage:", error);
+    return NextResponse.json({ error: "Internal Server Error" }, { status: 500 });
+  }
 }

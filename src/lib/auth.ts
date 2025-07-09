@@ -1,23 +1,22 @@
 import type { NextAuthOptions } from 'next-auth';
 import GoogleProvider from 'next-auth/providers/google';
 import { PLANS } from '@/lib/constants';
-import type { User, SubscriptionPlan } from '@/lib/types';
-
-// In a real app, this would be a database adapter.
-// We use a simple in-memory object to simulate a database.
-// This object will reset on every server restart.
-const userDatabase: Record<string, Pick<User, 'id' | 'plan' | 'usage'>> = {};
+import type { User } from '@/lib/types';
+import { db } from './firebase-admin';
 
 const googleClientId = process.env.GOOGLE_CLIENT_ID;
 const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
 const nextAuthSecret = process.env.NEXTAUTH_SECRET;
+const nextAuthUrl = process.env.NEXTAUTH_URL;
 
 if (!googleClientId || !googleClientSecret) {
-  throw new Error('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET. Please set them in your .env.local file.');
+  throw new Error('Missing GOOGLE_CLIENT_ID or GOOGLE_CLIENT_SECRET.');
 }
-
 if (!nextAuthSecret) {
-    throw new Error('Missing NEXTAUTH_SECRET. Please set it in your .env.local file.');
+    throw new Error('Missing NEXTAUTH_SECRET.');
+}
+if(!nextAuthUrl) {
+    throw new Error('Missing NEXTAUTH_URL.');
 }
 
 export const authOptions: NextAuthOptions = {
@@ -30,22 +29,42 @@ export const authOptions: NextAuthOptions = {
   secret: nextAuthSecret,
   callbacks: {
     async jwt({ token, user, account }) {
-      // On initial sign-in, user and account objects are available.
-      if (account && user && user.email) {
-        // Find or create the user in our mock database
-        if (!userDatabase[user.email]) {
-          userDatabase[user.email] = {
-            id: user.id, // This is the 'sub' from Google
-            plan: PLANS[0], // Default to free plan
+      if (account && user && user.email && user.id) {
+        const usersRef = db.collection('users');
+        const userDoc = await usersRef.doc(user.id).get();
+        
+        let appData: Pick<User, 'id' | 'plan' | 'usage'>;
+
+        if (!userDoc.exists) {
+          // New user, create them in Firestore
+          const freePlan = PLANS.find(p => p.id === 'free')!;
+          const newUser: User = {
+            id: user.id,
+            name: user.name || 'New User',
+            email: user.email,
+            image: user.image || null,
+            plan: freePlan,
             usage: {
               requests: 0,
-              maxRequests: PLANS[0].quota,
+              maxRequests: freePlan.quota,
             },
           };
+          await usersRef.doc(user.id).set(newUser);
+          appData = {
+            id: newUser.id,
+            plan: newUser.plan,
+            usage: newUser.usage,
+          };
+        } else {
+          // Existing user
+          const existingUser = userDoc.data() as User;
+          appData = {
+            id: existingUser.id,
+            plan: existingUser.plan,
+            usage: existingUser.usage,
+          };
         }
-        const appData = userDatabase[user.email];
 
-        // Add our custom fields to the token
         token.id = appData.id;
         token.plan = appData.plan;
         token.usage = appData.usage;
@@ -54,7 +73,6 @@ export const authOptions: NextAuthOptions = {
     },
 
     async session({ session, token }) {
-      // Add our custom fields from the token to the session
       if (token && session.user) {
         session.user.id = token.id;
         session.user.plan = token.plan;

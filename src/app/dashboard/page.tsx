@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/hooks/use-auth";
 import { useRouter } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
@@ -13,16 +13,33 @@ import { useToast } from "@/hooks/use-toast";
 
 const UsageResetAPIButton = () => {
     const { toast } = useToast();
+    const [isLoading, setIsLoading] = useState(false);
+
     const handleReset = async () => {
-        // This is a mock API call.
-        toast({
-            title: "API Called",
-            description: "Usage reset API has been triggered successfully for free users.",
-        });
+        setIsLoading(true);
+        try {
+            const res = await fetch('/api/usage/reset', { method: 'POST' });
+            const data = await res.json();
+            
+            if (!res.ok) throw new Error(data.error || 'Something went wrong');
+
+            toast({
+                title: "Success",
+                description: data.message,
+            });
+        } catch (error: any) {
+            toast({
+                title: "Error",
+                description: error.message,
+                variant: "destructive"
+            });
+        } finally {
+            setIsLoading(false);
+        }
     }
     return (
-        <Button onClick={handleReset} variant="outline" size="sm">
-            Trigger Usage Reset API
+        <Button onClick={handleReset} variant="outline" size="sm" disabled={isLoading}>
+            {isLoading ? "Resetting..." : "Trigger Usage Reset"}
         </Button>
     )
 }
@@ -45,7 +62,7 @@ export default function DashboardPage() {
         );
     }
     
-    const usagePercentage = user.plan.id === 'free' || user.plan.id === 'pro' ? (user.usage.requests / user.usage.maxRequests) * 100 : 0;
+    const usagePercentage = user.plan.quota > 0 ? (user.usage.requests / user.plan.quota) * 100 : 0;
 
     return (
         <div className="container py-12">
@@ -107,7 +124,7 @@ export default function DashboardPage() {
                             <>
                                 <Progress value={usagePercentage} className="mb-2" />
                                 <div className="text-center text-sm text-muted-foreground">
-                                    {user.usage.requests} / {user.usage.maxRequests} requests used
+                                    {user.usage.requests} / {user.plan.quota} requests used
                                 </div>
                             </>
                         )}
